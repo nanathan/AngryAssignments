@@ -546,6 +546,13 @@ local function AngryAssign_AddPage(widget, event, value)
 	StaticPopup_Show(popup_name)
 end
 
+local function AngryAssign_ViewPage(pageId)
+	local page = AngryAssign:Get(pageId)
+	if not page then return end
+	
+	AngryAssign:ViewPage(pageId)
+end
+
 local function AngryAssign_RenamePage(pageId)
 	local page = AngryAssign:Get(pageId)
 	if not page then return end
@@ -693,6 +700,16 @@ local function AngryAssign_RevertPage(widget, event, value)
 	AngryAssign:UpdateSelected(true)
 end
 
+function AngryAssign:ViewPage( id )
+	if AngryAssign_State.displayed ~= id then
+		AngryAssign_State.displayed = id
+		AngryAssign:UpdateDisplayed()
+		AngryAssign:ShowDisplay()
+		AngryAssign:UpdateTree()
+		AngryAssign:DisplayUpdateNotification()
+	end
+end
+
 function AngryAssign:DisplayPageByName( name )
 	for id, page in pairs(AngryAssign_Pages) do
 		if page.Name == name then
@@ -788,6 +805,7 @@ function AngryAssign_PageMenu(pageId)
 	if not PagesDropDownList then
 		PagesDropDownList = {
 			{ notCheckable = true, isTitle = true },
+			{ text = "View", notCheckable = true, func = function(frame, pageId) AngryAssign_ViewPage(pageId) end },
 			{ text = "Rename", notCheckable = true, func = function(frame, pageId) AngryAssign_RenamePage(pageId) end },
 			{ text = "Delete", notCheckable = true, func = function(frame, pageId) AngryAssign_DeletePage(pageId) end },
 			{ text = "Category", notCheckable = true, hasArrow = true },
@@ -798,17 +816,19 @@ function AngryAssign_PageMenu(pageId)
 
 	PagesDropDownList[1].text = page.Name
 	PagesDropDownList[2].arg1 = pageId
-	PagesDropDownList[2].disabled = not permission
+	PagesDropDownList[2].disabled = false
 	PagesDropDownList[3].arg1 = pageId
 	PagesDropDownList[3].disabled = not permission
+	PagesDropDownList[4].arg1 = pageId
+	PagesDropDownList[4].disabled = not permission
 
 	local categories = AngryAssign_CategoryMenuList(pageId)
 	if categories ~= nil then
-		PagesDropDownList[4].menuList = categories
-		PagesDropDownList[4].disabled = false
+		PagesDropDownList[5].menuList = categories
+		PagesDropDownList[5].disabled = false
 	else
-		PagesDropDownList[4].menuList = {}
-		PagesDropDownList[4].disabled = true
+		PagesDropDownList[5].menuList = {}
+		PagesDropDownList[5].disabled = true
 	end
 
 	return PagesDropDownList
