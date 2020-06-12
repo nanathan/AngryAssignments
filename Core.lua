@@ -221,6 +221,9 @@ function AngryAssign:ProcessMessage(sender, data)
 			self:UpdateDisplayed()
 			self:ShowDisplay()
 			if contents_updated then self:DisplayUpdateNotification() end
+		elseif AngryAssign_State.displayed ~= nil then
+			self:UpdateDisplayed()
+			self:ShowDisplay()
 		end
 		self:UpdateTree()
 
@@ -1923,7 +1926,17 @@ function AngryAssign:UpdateDisplayed()
 	local page = AngryAssign_Pages[ AngryAssign_State.displayed ]
 	if page then
 		local text = page.Contents
-
+		
+		for _, otherpage in pairs(AngryAssign_Pages) do
+			if otherpage.Id ~= page.Id then
+				local pattern = "@{" .. otherpage.Name .. "}"
+				pattern = pattern:gsub("[-]", "[-]")
+					:gsub("[*]", "[*]")
+					:gsub("[+]", "[+]")
+				text = text:gsub(pattern, otherpage.Contents)
+			end
+		end
+		
 		local highlights = { }
 		for token in string.gmatch( AngryAssign:GetConfig('highlight') , "[^%s%p]+") do
 			token = token:lower()
