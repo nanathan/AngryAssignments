@@ -2038,13 +2038,21 @@ function AngryAssign:OutputDisplayed(id)
 	end
 	if not id then id = AngryAssign_State.displayed end
 	local page = AngryAssign_Pages[ id ]
-	local channel
+	local channel, channelNumber, channelName
 	if not isClassic and (IsInGroup(LE_PARTY_CATEGORY_INSTANCE) or IsInRaid(LE_PARTY_CATEGORY_INSTANCE)) then
 		channel = "INSTANCE_CHAT"
 	elseif IsInRaid() then
 		channel = "RAID"
 	elseif IsInGroup() then
 		channel = "PARTY"
+	end
+	channelName = AngryAssign:GetConfig("channelname")
+	if AngryAssign:GetConfig("customchannel") and channelName and strlen(channelName) > 0 then
+		local cid, cname, ciid = GetChannelName(channelName)
+		if cid then
+			channel = "CHANNEL"
+			channelNumber = cid
+		end
 	end
 	if channel and page then
 		local output = page.Contents
@@ -2119,7 +2127,11 @@ function AngryAssign:OutputDisplayed(id)
 		local lines = { strsplit("\n", output) }
 		for _, line in ipairs(lines) do
 			if line ~= "" then
-				SendChatMessage(line, channel)
+				if channel == "CHANNEL" then
+					SendChatMessage(line, channel, nil, channelNumber)
+				else
+					SendChatMessage(line, channel)
+				end
 			end
 		end
 	end
@@ -2145,6 +2157,8 @@ local configDefaults = {
 	backdropColor = "00000080",
 	glowColor = "FF0000",
 	editBoxFont = false,
+	customchannel = false,
+	channelname = ""
 }
 
 function AngryAssign:GetConfig(key)
@@ -2555,6 +2569,34 @@ function AngryAssign:OnInitialize()
 						set = function(info, val)
 							self:SetConfig('allowplayers', val)
 							self:PermissionsUpdated()
+						end
+					},
+				}
+			},
+			output = {
+				type = "group",
+				order = 8,
+				name = "Output",
+				inline = true,
+				args = {
+					customchannel = {
+						type = "toggle",
+						order = 1,
+						name = "Custom Channel",
+						desc = "Enable to output to a custom channel",
+						get = function(info) return self:GetConfig('customchannel') end,
+						set = function(info, val)
+							self:SetConfig('customchannel', val)
+						end
+					},
+					channelname = {
+						type = "input",
+						order = 2,
+						name = "Channel Name",
+						desc = "The name of the custom channel to which assignments will be output",
+						get = function(info) return self:GetConfig('channelname') end,
+						set = function(info, val)
+							self:SetConfig('channelname', val)
 						end
 					},
 				}
