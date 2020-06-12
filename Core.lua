@@ -507,6 +507,19 @@ function AngryAssign_ToggleLock()
 	AngryAssign:ToggleLock()
 end
 
+local function AngryAssign_ShareCategory(catId)
+	if not AngryAssign:PermissionCheck() then return end
+	
+	local sendcount = 0
+	for _, page in pairs(AngryAssign_Pages) do
+		if page.CategoryId == catId then
+			AngryAssign:SendPage(page.Id, true)
+			sendcount = sendcount + 1
+		end
+	end
+	print("AngryAssignments: sending " .. sendcount .. " pages")
+end
+
 local function AngryAssign_AddPage(widget, event, value)
 	local popup_name = "AngryAssign_AddPage"
 	if StaticPopupDialogs[popup_name] == nil then
@@ -809,6 +822,7 @@ local function AngryAssign_CategoryMenu(catId)
 	if not CategoriesDropDownList then
 		CategoriesDropDownList = {
 			{ notCheckable = true, isTitle = true },
+			{ text = "Share", notCheckable = true, func = function(frame, catId) AngryAssign_ShareCategory(catId) end },
 			{ text = "Rename", notCheckable = true, func = function(frame, pageId) AngryAssign_RenameCategory(pageId) end },
 			{ text = "Delete", notCheckable = true, func = function(frame, pageId) AngryAssign_DeleteCategory(pageId) end },
 			{ text = "Category", notCheckable = true, hasArrow = true },
@@ -817,15 +831,16 @@ local function AngryAssign_CategoryMenu(catId)
 	CategoriesDropDownList[1].text = cat.Name
 	CategoriesDropDownList[2].arg1 = catId
 	CategoriesDropDownList[3].arg1 = catId
+	CategoriesDropDownList[4].arg1 = catId
 
 
 	local categories = AngryAssign_CategoryMenuList(-catId)
 	if categories ~= nil then
-		CategoriesDropDownList[4].menuList = categories
-		CategoriesDropDownList[4].disabled = false
+		CategoriesDropDownList[5].menuList = categories
+		CategoriesDropDownList[5].disabled = false
 	else
-		CategoriesDropDownList[4].menuList = {}
-		CategoriesDropDownList[4].disabled = true
+		CategoriesDropDownList[5].menuList = {}
+		CategoriesDropDownList[5].disabled = true
 	end
 
 	return CategoriesDropDownList
