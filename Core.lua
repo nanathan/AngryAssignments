@@ -410,12 +410,19 @@ function AngryAssign:SendRequestPage(id, to)
 end
 
 function AngryAssign:GetRaidLeader(online_only)
-	if (IsInRaid() or IsInGroup()) then
+	if (IsInGroup() and not IsInRaid()) then
 		for i = 1, GetNumGroupMembers() do
+			if UnitIsGroupLeader("party" .. i) then
+				return UnitName("party" .. i)
+			end
+		end
+	end
+	if IsInRaid() then
+		for i = 1, 40 do
 			local name, rank, subgroup, level, class, fileName, zone, online, isDead, role, isML = GetRaidRosterInfo(i)
 			if rank == 2 then
 				if (not online_only) or online then
-					return EnsureUnitFullName(name)
+					return name
 				else
 					return nil
 				end
@@ -1462,6 +1469,17 @@ function AngryAssign:UpdateOfficerRank()
 		for _, memberInfo in ipairs(allMemberList) do
 			if memberInfo.name and (memberInfo.role == Enum.ClubRoleIdentifier.Owner or memberInfo.role == Enum.ClubRoleIdentifier.Leader or memberInfo.role == Enum.ClubRoleIdentifier.Moderator) then
 				guildOfficerNames[EnsureUnitFullName(memberInfo.name)] = true
+			end
+		end
+	end
+	
+	if IsInGuild() then
+		for i = 1, GetNumGuildMembers() do
+			local name, _, rank = GetGuildRosterInfo(i)
+			local permissions = C_GuildInfo.GuildControlGetRankFlags(rank + 1)
+			-- 3 = officerchat listen, 4 = officerchat speak
+			if permissions[3] or permissions[4] then
+				guildOfficerNames[name] = true
 			end
 		end
 	end
