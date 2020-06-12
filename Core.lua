@@ -2014,6 +2014,9 @@ function AngryAssign:OutputDisplayed(id)
 	if channel and page then
 		local output = page.Contents
 
+		if LOCALIZED_CLASS_NAMES_MALE["DEATHKNIGHT"] == nil then LOCALIZED_CLASS_NAMES_MALE["DEATHKNIGHT"] = "" end
+		if LOCALIZED_CLASS_NAMES_MALE["MONK"] == nil then LOCALIZED_CLASS_NAMES_MALE["MONK"] = "" end
+		if LOCALIZED_CLASS_NAMES_MALE["DEMONHUNTER"] == nil then LOCALIZED_CLASS_NAMES_MALE["DEMONHUNTER"] = "" end
 		output = output:gsub("||", "|")
 			:gsub(ci_pattern('|r'), "")
 			:gsub(ci_pattern('|cblue'), "")
