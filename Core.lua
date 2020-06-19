@@ -875,8 +875,10 @@ local function AngryAssign_ClearPage(widget, event, value)
 end
 
 local function AngryAssign_TextChanged(widget, event, value)
+	local page = AngryAssign_Pages[AngryAssign:SelectedId()]
+	local unrestorable = not page or not page.Backup
 	AngryAssign.window.button_revert:SetDisabled(false)
-	AngryAssign.window.button_restore:SetDisabled(false)
+	AngryAssign.window.button_restore:SetDisabled(unrestorable)
 	AngryAssign.window.button_display:SetDisabled(true)
 	AngryAssign.window.button_output:SetDisabled(true)
 end
@@ -1439,7 +1441,7 @@ function AngryAssign:UpdateSelected(destructive)
 		self.window.button_revert:SetDisabled(not self.window.text.button:IsEnabled())
 		self.window.button_display:SetDisabled(self.window.text.button:IsEnabled())
 		self.window.button_output:SetDisabled(self.window.text.button:IsEnabled())
-		self.window.button_restore:SetDisabled(not self.window.text.button:IsEnabled() and page.Backup == page.Contents)
+		self.window.button_restore:SetDisabled(not self.window.text.button:IsEnabled() and (not page.Backup or page.Backup == page.Contents))
 		self.window.text:SetDisabled(false)
 	else
 		self.window.button_rename:SetDisabled(true)
@@ -1643,7 +1645,6 @@ function AngryAssign:UpdateContents(id, value)
 	local new_content = value:gsub('^%s+', ''):gsub('%s+$', '')
 	local contents_updated = new_content ~= page.Contents
 	page.Contents = new_content
-	page.Backup = new_content
 	page.Updated = time()
 	page.UpdateId = self:Hash(page.Name, page.Contents)
 
