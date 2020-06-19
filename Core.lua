@@ -523,6 +523,127 @@ local function AngryAssign_ShareCategory(catId)
 	print("AngryAssignments: sending " .. sendcount .. " pages")
 end
 
+local function AngryAssign_ExportCategory(catId)
+	local data = {}
+	local n = 0
+	
+	local category = AngryAssign:GetCat(catId)
+	
+	if not category then
+		return
+	end
+	
+	for _, page in pairs(AngryAssign_Pages) do
+		if page.CategoryId == catId then
+			n = n + 1
+			data[n] = {
+				[PAGE_Id] = page.Id,
+				[PAGE_Updated] = page.Updated,
+				[PAGE_Name] = page.Name,
+				[PAGE_Contents] = page.Contents,
+				[PAGE_UpdateId] = page.UpdateId
+			}
+		end
+	end
+	
+	data["n"] = n
+	data["Name"] = category.Name
+	
+	-- Note: we're using the serialized data directly, because
+	-- the compressed/encoded version seems to have undisplayable bytes
+	-- (i.e. technically transmittable between addons, but not usable for textbox copy/paste)
+	local sData = libS:Serialize(data)
+	--local cData = libC:CompressHuffman(sData)
+	--local dataString = libCE:Encode(cData)
+	
+	AngryAssign:CreateExportWindow(category.Name, sData)
+end
+
+local function AngryAssign_ImportCategory(data)
+	local n
+	local contents_updated = false
+	
+	if not data or not data["n"] or data["n"] < 1 then
+		return
+	end
+	
+	for n = 1, data["n"] do
+		local pdata = data[n]
+		
+		local id = pdata[PAGE_Id]
+		local page = AngryAssign_Pages[id]
+		if page then
+			if page.Contents ~= pdata[PAGE_Contents] then
+				contents_updated = true
+			end
+			
+			page.Name = pdata[PAGE_Name]
+			page.Contents = pdata[PAGE_Contents]
+			page.Updated = pdata[PAGE_Updated]
+			page.UpdateId = pdata[PAGE_UpdateId] or AngryAssign:Hash(page.Name, page.Contents)
+			
+			if AngryAssign:SelectedId() == id then
+				AngryAssign:UpdateSelected(true)
+			end
+		else
+			AngryAssign_Pages[id] = {
+				Id = id,
+				Updated = pdata[PAGE_Updated],
+				UpdateId = pdata[PAGE_UpdateId],
+				Name = pdata[PAGE_Name],
+				Contents = pdata[PAGE_Contents],
+			}
+		end
+	end
+	
+	AngryAssign:UpdateDisplayed()
+	AngryAssign:ShowDisplay()
+	if contents_updated and AngryAssign:SelectedId() then
+		AngryAssign:DisplayUpdateNotification()
+	end
+	AngryAssign:UpdateTree()
+end
+
+local function AngryAssign_ShowImportWindow()
+	AngryAssign:CreateImportWindow()
+end
+
+local function AngryAssign_ImportTextEntered(widget, event, text)
+	if not text or strlen(text) < 1 then
+		return
+	end
+	
+	local success, data = libS:Deserialize(text) -- Deserialize the data
+	if not success then error("Error deserializing " .. final); return end
+	
+	-- TBD: could probably use a bit more feedback
+	if not data or not data["n"] or not data["Name"] then
+		return
+	end
+	
+	local popup_name = "AngryAssign_ImportCategoryPopup"
+	--if StaticPopupDialogs[popup_name] == nil then
+		StaticPopupDialogs[popup_name] = {
+			button1 = OKAY,
+			button2 = CANCEL,
+			OnAccept = function(self)
+				--local text = self.editBox:GetText()
+				--AngryAssign:RenamePage(page.Id, text)
+				AngryAssign_ImportCategory(data)
+			end,
+			OnShow = function(self)
+				self.editBox:SetText(data["Name"])
+			end,
+			whileDead = true,
+			hideOnEscape = true,
+			preferredIndex = 3
+		}
+	--end
+	StaticPopupDialogs[popup_name].text = 'Import ' .. data["n"] .. ' pages from category "' .. data["Name"] .. '"?'
+
+	StaticPopup_Show(popup_name)
+end
+
 local function AngryAssign_AddPage(widget, event, value)
 	local popup_name = "AngryAssign_AddPage"
 	if StaticPopupDialogs[popup_name] == nil then
@@ -846,6 +967,7 @@ local function AngryAssign_CategoryMenu(catId)
 		CategoriesDropDownList = {
 			{ notCheckable = true, isTitle = true },
 			{ text = "Share", notCheckable = true, func = function(frame, catId) AngryAssign_ShareCategory(catId) end },
+			{ text = "Export", notCheckable = true, func = function(frame, catId) AngryAssign_ExportCategory(catId) end },
 			{ text = "Rename", notCheckable = true, func = function(frame, pageId) AngryAssign_RenameCategory(pageId) end },
 			{ text = "Delete", notCheckable = true, func = function(frame, pageId) AngryAssign_DeleteCategory(pageId) end },
 			{ text = "Category", notCheckable = true, hasArrow = true },
@@ -1038,6 +1160,71 @@ function AngryAssign:CreateWindow()
 	self:UpdateMedia()
 	
 	--self:CreateIconPicker()
+end
+
+function AngryAssign:CreateExportWindow(categoryName, dataString)
+	local window = AceGUI:Create("Frame")
+	window:SetTitle("Angry Assignments Export")
+	window:SetStatusText(categoryName)
+	window:SetCallback("OnClose", function(widget) AceGUI:Release(widget) end)
+	window:SetLayout("Flow")
+	if AngryAssign:GetConfig('scale') then window.frame:SetScale( AngryAssign:GetConfig('scale') ) end
+	
+	window.frame:SetMinResize(700, 400)
+	window.frame:SetFrameStrata("HIGH")
+	window.frame:SetFrameLevel(1)
+	window.frame:SetClampedToScreen(true)
+	
+	AngryAssign.exportWindow = window
+	AngryAssign_ExportWindow = window.frame
+	tinsert(UISpecialFrames, "AngryAssign_ExportWindow")
+	
+	local text = AceGUI:Create("MultiLineEditBox")
+	text:SetLabel(nil)
+	text:SetFullWidth(true)
+	text:SetFullHeight(true)
+	text:SetMaxLetters(0)
+	window:AddChild(text)
+	window.text = text
+	text.button:SetWidth(75)
+	local buttontext = text.button:GetFontString()
+	buttontext:ClearAllPoints()
+	buttontext:SetPoint("TOPLEFT", text.button, "TOPLEFT", 15, -1)
+	buttontext:SetPoint("BOTTOMRIGHT", text.button, "BOTTOMRIGHT", -15, 1)
+	
+	text:SetText(dataString)
+end
+
+function AngryAssign:CreateImportWindow()
+	local window = AceGUI:Create("Frame")
+	window:SetTitle("Angry Assignments Import")
+	window:SetStatusText("Enter the serialized pages text and click 'Accept'")
+	window:SetCallback("OnClose", function(widget) AceGUI:Release(widget) end)
+	window:SetLayout("Flow")
+	if AngryAssign:GetConfig('scale') then window.frame:SetScale( AngryAssign:GetConfig('scale') ) end
+	
+	window.frame:SetMinResize(700, 400)
+	window.frame:SetFrameStrata("HIGH")
+	window.frame:SetFrameLevel(1)
+	window.frame:SetClampedToScreen(true)
+	
+	AngryAssign.importWindow = window
+	AngryAssign_ImportWindow = window.frame
+	tinsert(UISpecialFrames, "AngryAssign_ImportWindow")
+	
+	local text = AceGUI:Create("MultiLineEditBox")
+	text:SetLabel(nil)
+	text:SetFullWidth(true)
+	text:SetFullHeight(true)
+	text:SetCallback("OnEnterPressed", AngryAssign_ImportTextEntered)
+	text:SetMaxLetters(0)
+	window:AddChild(text)
+	window.text = text
+	text.button:SetWidth(75)
+	local buttontext = text.button:GetFontString()
+	buttontext:ClearAllPoints()
+	buttontext:SetPoint("TOPLEFT", text.button, "TOPLEFT", 15, -1)
+	buttontext:SetPoint("BOTTOMRIGHT", text.button, "BOTTOMRIGHT", -15, 1)
 end
 
 local function AngryAssign_IconPicker_Clicked(widget, event)
@@ -2234,6 +2421,13 @@ function AngryAssign:OnInitialize()
 				name = "Toggle Window",
 				desc = "Shows/hides the edit window (also available in game keybindings)",
 				func = function() AngryAssign_ToggleWindow() end
+			},
+			import = {
+				type = "execute",
+				order = 98,
+				name = "Import Pages",
+				hidden = true,
+				func = function() AngryAssign_ShowImportWindow() end
 			},
 			help = {
 				type = "execute",
