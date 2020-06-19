@@ -202,8 +202,6 @@ function AngryAssign:ProcessMessage(sender, data)
 		local id = data[PAGE_Id]
 		local page = AngryAssign_Pages[id]
 		if page then
-			if data[PAGE_UpdateId] and page.UpdateId == data[PAGE_UpdateId] then return end -- The version received is same as the one we already have
-
 			contents_updated = page.Contents ~= data[PAGE_Contents]
 			page.Name = data[PAGE_Name]
 			page.Contents = data[PAGE_Contents]
