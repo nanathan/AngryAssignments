@@ -325,7 +325,7 @@ function AngryAssign:SendPageMessage(id)
 	local page = AngryAssign_Pages[ id ]
 	if not page then error("Can't send page, does not exist"); return end
 	if not page.UpdateId then page.UpdateId = self:Hash(page.Name, page.Contents) end
-	self:SendOutMessage({ "PAGE", [PAGE_Id] = page.Id, [PAGE_Updated] = page.Updated, [PAGE_Name] = page.Name, [PAGE_Contents] = page.Contents, [PAGE_UpdateId] = page.UpdateId })
+	self:SendOutMessage({ "PAGE", [PAGE_Id] = page.Id, [PAGE_Updated] = page.Updated, [PAGE_Name] = page.Name, [PAGE_Contents] = page.Contents })
 end
 
 function AngryAssign:SendDisplay(id, force)
@@ -977,15 +977,15 @@ local function AngryAssign_CategoryMenu(catId)
 	CategoriesDropDownList[2].arg1 = catId
 	CategoriesDropDownList[3].arg1 = catId
 	CategoriesDropDownList[4].arg1 = catId
-
+	CategoriesDropDownList[5].arg1 = catId
 
 	local categories = AngryAssign_CategoryMenuList(-catId)
 	if categories ~= nil then
-		CategoriesDropDownList[5].menuList = categories
-		CategoriesDropDownList[5].disabled = false
+		CategoriesDropDownList[6].menuList = categories
+		CategoriesDropDownList[6].disabled = false
 	else
-		CategoriesDropDownList[5].menuList = {}
-		CategoriesDropDownList[5].disabled = true
+		CategoriesDropDownList[6].menuList = {}
+		CategoriesDropDownList[6].disabled = true
 	end
 
 	return CategoriesDropDownList
